@@ -180,6 +180,9 @@ plt.show()</code></pre>
 										<p>My interpretation of the results is that some O(1) task that takes roughly 30ms dominates the run time with fewer graphs, but with more graphs the run time approaches O(N). This is encouraging, as it suggests that the runtime will not balloon exponentially with the final, larger data set.</p>
 										<p>I tested the time complexity with respect to the number of nodes/edges per graph using a similar method as well. I expected this to come out to O(N*LogN) because the pandas drop duplicates function (which I use to create the nodes table) sorts the elements before searching for duplicates, and this sort function has N*LogN time complexity, while the other operations in this script are O(1) or O(N). This is more or less confirmed by my testing</p>
 										<img src="images/node_testing_3.png" style="height: 350px;">
+										<p>This is okay because the final dataset scales up the number of graphs significantly, but not the number of nodes per graph. It is possible to remove duplicates in O(N) time, and that may be worth testing depending on the size of the final data set; however this operation is performed once regardless of graph or node count and it is still fairly efficient (only takes 0.235 seconds in the worst case).
+											Based on this testing 
+										</p>
 
 
 
