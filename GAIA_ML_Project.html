@@ -1,0 +1,231 @@
+<!DOCTYPE HTML>
+<!--
+	Massively by HTML5 UP
+	html5up.net | @ajlkn
+	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
+-->
+<html>
+	<head>
+		<title>Supply Chain Modeling Project</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="stylesheet" href="assets/css/prism.css" />
+		<link rel="stylesheet" href="assets/css/main.css" />
+		<noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
+	</head>
+	<body class="is-preload">
+		<script src="assets/js/prism.js"></script>
+
+		<!-- Wrapper -->
+			<div id="wrapper" class="language-python">
+				<header id="header"></header>
+
+				<!-- Nav -->
+					<nav id="nav">
+						<ul class="links">
+							<li><a href="index.html">This is Massively</a></li>
+							<li><a href="generic.html">Generic Page</a></li>
+							<li class="active"><a href="elements.html">Elements Reference</a></li>
+						</ul>
+						<ul class="icons">
+							<li><a href="https://www.linkedin.com/in/nickjfitzhugh/" class="icon brands fa-linkedin"><span class="label">Linkedin</span></a></li>
+							<li><a href="https://github.com/nfitzhugh-us" class="icon brands fa-github"><span class="label">GitHub</span></a></li>
+						</ul>
+					</nav>
+
+				<!-- Main -->
+					<div id="main">
+
+						<!-- Post -->
+							<section class="post">
+								<header class="major">
+									<h1>Supply Chain<br />
+									Modeling project</h1>
+								</header>
+
+								<!-- Text stuff -->
+									<h2>Overview</h2>
+									<p style="text-indent: 25px;">	The work on this page is part of my contribution to research conducted by University of San Francisco professor Vijay Mehrotra.
+										 This project involves using graph databases to simulate a million possible supply chain states,
+										  and applies an evolutionary machine learning algorithm (GAIA) to identify patterns that lead to catastrophic supply chain failures. 
+										  This project has captured my interest because of the opportunities to apply concepts that I learned in a pure mathematics context, 
+										  such as graph theory, to real world creative problem solving.</p>
+									<p style="text-indent: 25px;">Thus far, my primary responsibility in the project has been integrating the machine learning algorithm with the rest of the project’s workflow. 
+										When I joined the project, Prof. Mehrotra and his collaborators had already developed a method for simulating supply chain conditions and chosen GAIA as a way to identify discriminative subgraph patterns in the resulting data. 
+										Graph Classification using Evolutionary Computation (GAIA) is an algorithm developed by Ning Jin, Calvin Young, and Wei Wang of the University of North Carolina at Chapel Hill in 2010. 
+										It was chosen for its ability to identify large discriminative subgraph patterns with high discriminative power with comparatively low computational complexity.
+									</p>
+									<p style="text-indent: 25px;">In broad strokes, this algorithm takes one set of ‘positive’ graphs and one set of ‘negative’ graphs, 
+										with each graph having the same or an overlapping set of nodes to the other graphs, but a unique set of edges connecting those nodes. 
+										It uses evolutionary computation to identify structures that appear frequently in the positive graphs, but not in the negative ones. 
+										These structures are referred to as discriminative subgraph patterns. At the end of the evolutionary computation process, the algorithm has identified many candidate patterns with varying discriminative power. 
+										It then uses a simple rule selection method to select the candidates which individually are the most strongly predictive and culls the rest. 
+										The presence or absence of these highly discriminative subgraph patterns can then be used to predict whether or not a new graph will exhibit the positive trait.</p>
+									<p style="text-indent: 25px;">In the case of this project, the nodes of each graph represent the source of some good (like a mine or factory) 
+										and the edges proceeding from that node represent the ability of that producer to make their product and transport it to another node. 
+										A graph is deemed positive if the cost of operating under the conditions of that graph was above a certain threshold and negative otherwise.</p>
+									<p style="text-indent: 25px;">I was brought onto this project to develop a way to convert the data from Prof. Mehrotra’s simulations to the form that the GAIA code required. 
+										While he and I were going through the documentation for GAIA, he expressed frustration with the method that GAIA used to pare down the candidate list after the evolutionary computation had completed. 
+										He said he would have preferred to use a more modern method that could account for things like changing predictive power when two disconnected subgraph patterns co-occur in the same graph. 
+										Although the code for GAIA was written in C++ (which I had no direct experience with), I had a strong understanding of the algorithm and I wanted to contribute what I could to a project this interesting, 
+										so I volunteered to edit the code to make this possible. I will explore each of these steps in greater detail below.</p>
+									<hr />
+					
+									<header>
+										<h2>Data Conversion for GAIA Inputs</h2>
+									</header>
+									<p>The results of the simulationa are stored in an excel file with the following format:</p>
+									<img src="images/excel_format.png" alt = 'Excel File Screenshot' style="height: 200px;">
+									<p>Each row represents one edge in one graph. ‘GraphID’ identifies the graph in which this edge exists, 
+										‘From’ and ‘To’ identify the origin and destination nodes respectively for that edge, 
+										‘Prod’ identifies what product would be transported along that edge, ‘CostPerUnit’ is self explanatory, 
+										and ‘MaxFlow’ indicates how many units of product are able to be produced and transported on this edge. 
+										Other information is stored in columns G and beyond, but it's not relevent for this task.
+									</p>
+
+									<p>GAIA requires a Config file, a Node file, and an Edge file. The Config file provides information like the number of positive graphs in the sample and the number of candidates that the algorithm should consider for each graph, all of which can be entered manually. 
+									</p>
+
+									<p>
+										The node file contains one row for each node in each graph in the sample. Each row has four columns: the first stores information about the node that is not used for pattern mining, the second stores the GraphID of the graph in which it appears, the third stores the NodeID, and the fourth stores the node label.
+									</p>
+										
+									<p>
+										The edge file contains one row for each edge in each graph. Each row has one column for extra information (for our purposes, this is a string with the origin and destination node IDs), one for the graph ID in which the node appears, one for each of the origin and destination node IDs, and one for the edge label (same as the extra information column). The purpose of the code below is to create the input files for GAIA using the Excel file.
+									</p>
+
+
+									<header>
+										<h3>Input Conversion Code</h3>
+									</header>
+
+									<p>
+										My first step was to read in the necessary data from the excel.
+									</p>
+						
+									<pre><code class="language-python">import pandas as pd
+df = pd.read_excel('SampleFile.xlsm')
+df = df.iloc[:,:6]
+n = df.iloc[-1].GraphID # count of graphs
+GraphID_List = list(range(1,n+1))</code></pre>
+									
+									<header><h4>Creating the Node.txt File</h4></header>
+
+									<p>
+										Next, I had to create the node labels by concatenating the ‘From’+‘Prod’ and ‘To’+‘Prod’ columns row-wise, joining those two lists, and dropping any duplicates.
+									</p>
+									<pre><code class="language-python">df['H'] = df['From'] + '-' + df['Prod']
+df['I'] = df['To'] + '-' + df['Prod']
+Node_Table = pd.concat([df['H'],df['I']])
+Node_Table.drop_duplicates(inplace = True, ignore_index = True)
+Node_Names = list(Node_Table)
+Node_Table = Node_Table.to_frame().reset_index().rename(columns={'index': 'NodeID', 0: 'Node_Name'})
+Node_Table.NodeID += 1
+									</code></pre>
+									<p>This code creates the following table.</p>
+									<img src="/images/Node_Table_start.png" alt="Node Table Screenshot" style="height: 150px;">
+									<p>To complete the Node.txt file I needed to add an ‘extra information’ column and a GraphID column to this table.</p>
+									<pre><code>graphID_col = [1]*len(Node_Table)
+temp_table = pd.DataFrame({'Node_ID_copy':Node_Table['NodeID'],'GraphID':[1]*len(Node_Table)})
+Node_Table = pd.concat([temp_table,Node_Table], axis = 1)</code></pre>
+									<img src="/images/Node_table_end.png" style="height: 150px;">
+									<p>And then write this table to a .txt file</p>
+									<pre><code>import numpy as np
+with open('node_file_1.txt', 'w') as file:
+for graph in GraphID_List:
+	values = Node_Table.values
+	np.savetxt(file, values, delimiter=" ",fmt='%s')
+	Node_Table['GraphID'] += 1</code></pre>
+
+									<header><h4>Creating the Edge.txt File</h4></header>
+									<p>The following code filters the original data frame for edges with positive MaxFlow, alters the format of the resulting data frame to match that required for the Edge.txt file, and writes it. The table below the code shows the first five rows of the resulting Edge_All data frame.</p>
+									<pre><code>Edge_All = df[df.MaxFlow > 0][['GraphID','H', 'I']].copy()
+Edge_All.rename(columns={'H': 'ANN_Source', 'I':'ANN_Sink'}, inplace=True)
+Edge_All['Edge_Name'] = Edge_All.ANN_Source + Edge_All.ANN_Sink
+e_name = Edge_All.Edge_Name
+Edge_All.insert(loc=0, column='edge_name_copy', value = e_name)
+Edge_All.head()
+with open('edge_file.txt', 'w') as edge_file:
+    np.savetxt(edge_file, Edge_All.values, delimiter= ' ', fmt = '%s')</code></pre>
+									<img src="/images/Edge_All.png" alt="Edge file table screenshot" style="height:  150px;">
+
+									<header><h3>Testing Input Conversion Script</h3></header>
+									<p>This script will have to handle large amounts of data, so I did some testing to confirm that it would be able to run in a reasonable amount of time.</p>
+									<p>In reviewing my code, I found that each action should either run in constant time or scale linearly with the number of graphs in the sample, so I expected to find that the time complexity of my code approaches O(N) as the number of graphs increases. To test this, I created test cases with 1, 10, 100, and 1000 graphs. I then used the %timeit line magic to get the average run time of 7 loops with each file.
+									</p>
+									<pre><code>import matplotlib.pyplot as plt
+files = ['1_graph_sample.xlsm', '10_graph_sample.xlsm', '100_graph_sample.xlsm', '1000_graph_sample.xlsm']
+g_times = {}
+for i in range(len(files)):
+	res = %timeit -o script(files[i])
+	g_times[10**i] = res.average
+
+
+lists = sorted(g_times.items())
+num_graphs, run_time = zip(*lists)
+	
+plt.plot(num_graphs, run_time, marker='o')
+plt.yscale('log')
+plt.xscale('log')
+plt.gca().spines[['top', 'right']].set_visible(False)
+	
+for i, (xi, yi) in enumerate(zip(num_graphs, run_time)):
+	plt.annotate(f'({xi}, {round(yi, 3)})', (xi, yi), textcoords="offset fontsize", xytext=(.5, -.5))
+	
+plt.ylabel('Run Time (seconds)')
+plt.xlabel('Number of Graphs')
+	
+plt.show()</code></pre>
+										<img src="images/Graph_testing_3.png" style="height: 350px;">
+										<p>My interpretation of the results is that some O(1) task that takes roughly 30ms dominates the run time with fewer graphs, but with more graphs the run time approaches O(N). This is encouraging, as it suggests that the runtime will not balloon exponentially with the final, larger data set.</p>
+										<p>I tested the time complexity with respect to the number of nodes/edges per graph using a similar method as well. I expected this to come out to O(N*LogN) because the pandas drop duplicates function (which I use to create the nodes table) sorts the elements before searching for duplicates, and this sort function has N*LogN time complexity, while the other operations in this script are O(1) or O(N). This is more or less confirmed by my testing</p>
+										<img src="images/node_testing_3.png" style="height: 350px;">
+
+
+
+									<hr />
+
+								
+				<!-- Footer -->
+					<footer id="footer">
+						<section class="split contact">
+							<section class="alt">
+								<h3>Address</h3>
+								<p>Oakland, CA 94618</p>
+							</section>
+							<section>
+								<h3>Phone</h3>
+								<p><a href="#15103681225">(510) 368-1225</a></p>
+							</section>
+							<section>
+								<h3>Email</h3>
+								<p><a href="#">nicholas.j.fitzhugh@gmail.com</a></p>
+							</section>
+							<section>
+								<h3>Social</h3>
+								<ul class="icons alt">
+									<li><a href="https://www.linkedin.com/in/nickjfitzhugh/" class="icon brands fa-linkedin"><span class="label">Linkedin</span></a></li>
+									<li><a href="https://github.com/nfitzhugh-us" class="icon brands fa-github"><span class="label">GitHub</span></a></li>
+								</ul>
+							</section>
+						</section>
+					</footer>
+
+				<!-- Copyright -->
+					<div id="copyright">
+						<ul><li>&copy; Untitled</li><li>Design: <a href="https://html5up.net">HTML5 UP</a></li></ul>
+					</div>
+
+			</div>
+
+		<!-- Scripts -->
+			<script src="assets/js/jquery.min.js"></script>
+			<script src="assets/js/jquery.scrollex.min.js"></script>
+			<script src="assets/js/jquery.scrolly.min.js"></script>
+			<script src="assets/js/browser.min.js"></script>
+			<script src="assets/js/breakpoints.min.js"></script>
+			<script src="assets/js/util.js"></script>
+			<script src="assets/js/main.js"></script>
+
+	</body>
+</html>
